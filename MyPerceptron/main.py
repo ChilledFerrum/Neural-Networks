@@ -28,10 +28,6 @@ for i in range(0, n_inputs):
     if weights[i] == 0:
         weights[i] += 0.1
 
-# SelectedPredictions = np.zeros(n_rows)
-Show_Seasons = [1, 3, 10, 18]
-plotWeights = np.zeros(shape=(len(Show_Seasons), n_inputs + 1))
-
 # Activation Function Outputs [First , Second]. Changes according to the dataset that is being used
 act_outputs = ['C1', 'C2']
 
@@ -165,9 +161,7 @@ while current_season < seasons:
 
     if miss == 0:
         break
-    if current_season in Show_Seasons:
-        for i in range(0, n_inputs):
-            plotWeights[ShowIter][i] = weights[i]
+
         ShowIter += 1
     current_season += 1
 
