@@ -164,8 +164,8 @@ while current_season < seasons:
                    ylabel='X2',
                    title="Season: " + str(current_season) + " Iter: " + str(current_iter)
                    )
-            ax.set_xlim([min(weights[0]) - 2, max(weights[0]) + 2])
-            ax.set_ylim([min(weights[1]) - 2, max(weights[1]) + 2])
+            ax.set_xlim([min(X_train[:, [0]]) - 2, max(X_train[:, [0]]) + 2])
+            ax.set_ylim([min(X_train[:, [1]]) - 2, max(X_train[:, [1]] + 2)])
             ax.scatter(X_train[:, [0]], X_train[:, [1]], marker='o', c=currently_predicted)
             line, = ax.plot(x, y)
             line.set_ydata(y)
