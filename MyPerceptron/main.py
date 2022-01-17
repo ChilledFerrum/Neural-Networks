@@ -28,37 +28,60 @@ import random
 # Play around with the Parameters Here is some hints
 
 # urlDataset = 'dataset1.csv'
-# learning_rate = 0.08
 # n_rows = 100
-# n_inputs = 2
+# n_inputs = 3
 # act_outputs = [1, -1]
+# For the 3D dataset change to act_outputs = ['C1', 'C2']
+# For the 3D dataset change urlDataset = 'dataset3D.csv'
+# For the 3D dataset change n_inputs = 3
 
-urlDataset = 'dataset3D.csv'  # Dataset URL
+
+
+urlDataset = 'dataset1.csv'  # Dataset URL
+# Change this to train the dataset faster
 learning_rate = 0.05
+# Number of rows in the dataset
 n_rows = 100
-n_inputs = 3  # Changes with the dataset
-seasons = 30
-
-
-weights = np.zeros(n_inputs)
-bias = random.uniform(-2.0, 2.0)
-
-# Randomize weights...
-for i in range(0, n_inputs):
-    weights[i] = random.uniform(-2.0, 2.0)
-    if weights[i] == 0:
-        weights[i] += 0.1
-
-# Activation Function Outputs [First , Second]. 
-# Change act_outputs according to the dataset's target label 
-# e.g. act_outputs = ['C1', 'C2'] OR act_outputs = [1, -1]
-
-act_outputs = ['C1', 'C2']
+# Number of Inputs
+n_inputs = 2  # Changes with the dataset
+# Number of Epochs
+seasons = 100
+# Activation Function Outputs [First , Second]. Change this according to the dataset that is being used
+act_outputs = [1, -1]
 
 # Set Target Label Name...
 t_label = 'Y'
 # Set Label Starting Character
 input_label = 'X'
+
+# Execution Process parameters...
+# View Real Time Plots (This will take time to finish according to the computer's process speed)
+ViewRealTimePlots = True
+
+# Stop at Set Seasons if Seasons is 10 it will stop at season 10 if StopAtSetSeasons = True
+StopAtSetSeasons = True
+
+# Use My Dynamic Learning Rate method
+useDynamicLR = True
+if useDynamicLR:
+    # Higher LRrate means higher Learning Rate values, 2D recommended [0.01 - 0.015] 3D recommended at 0.2 +/-
+    # LRrate is based on how big the linear Output is
+    LRrate = 0.01
+    DynamicLearningRate = learning_rate
+
+# Use weight & bias Randomization
+useWeightRandomization = True
+
+weights = np.zeros(n_inputs)  # +1 is for the included weight for the bias
+bias = 1
+
+# Randomize weights & bias...
+if useWeightRandomization:
+    for i in range(0, n_inputs):
+        weights[i] = random.uniform(-2.0, 2.0)
+        if weights[i] == 0:
+            weights[i] += 0.1
+    bias = random.uniform(-2.0, 2.0)
 
 
 def initDataset(UrlDataset, n):
@@ -66,36 +89,29 @@ def initDataset(UrlDataset, n):
     return data
 
 
-# Returns 0 if the function of the linear output is greater than 0
+# Returns 0 if the function of the linear output is greater or equal than 0
 def activationFunc(Y):
-    return 1.0 if Y > 0 else 0.0
+    return 1.0 if Y >= 0 else 0.0
 
 
-# Load Data using pandas to numpy
+# Load Data
 dataset = initDataset(urlDataset, n_rows)
+dataset = pd.DataFrame(dataset)
+dataset = dataset.sample(frac=1)
+
 df_target = pd.DataFrame(dataset, columns=[t_label])
 target = df_target.to_numpy()
 
-# Convert Labels to 1 & 0
-if n_inputs == 2:
-    for idx, x in enumerate(target):
-        if x == act_outputs[0]:
-            target[idx] = 1.0
-        elif x == act_outputs[1]:
-            target[idx] = 0.0
 
+# Convert target outputs to 1 & 0
+for idx, x in enumerate(target):
+    if x == act_outputs[0]:
+        target[idx] = 1.0
+    elif x == act_outputs[1]:
+        target[idx] = 0.0
+# Invert StopAtSetSeasons (Works like a switch button)
+StopAtSetSeasons = np.invert(StopAtSetSeasons)
 
-# Convert String Labels to 1 & 0
-if isinstance(act_outputs[0], str):
-    target = np.zeros(n_rows)
-    for col, row in df_target.iterrows():
-        if row[t_label] == act_outputs[0]:
-            target[col] = 1.0
-        elif row[t_label] == act_outputs[1]:
-            target[col] = 0.0
-
-
-# Data Retrieval using pandas
 Iter = 0
 dfX_train = pd.DataFrame()
 for col in dataset:
@@ -106,39 +122,37 @@ for col in dataset:
 
 X_train = dfX_train.to_numpy()
 
-# plot planning/preparation for 2D dataset
 if n_inputs == 2:
     x = np.arange(0, np.max(X_train[:, [0]]), 0.1)
     y = -(weights[0] / weights[1]) * x + (-bias / weights[1])
+    if ViewRealTimePlots:
+        plt.ion()
+        fig = plt.figure()
+        ax = fig.add_subplot()
+        ax.set_xlim([min(X_train[:, [0]]) - 2, max(X_train[:, [0]]) + 2])
+        ax.set_ylim([min(X_train[:, [1]]) - 2, max(X_train[:, [1]] + 2)])
 
-    plt.ion()
-    fig = plt.figure()
-    ax = fig.add_subplot()
-    ax.set_xlim([min(X_train[:, [0]]) - 2, max(X_train[:, [0]]) + 2])
-    ax.set_ylim([min(X_train[:, [1]]) - 2, max(X_train[:, [1]] + 2)])
+        line, = ax.plot(x, y)
 
-    line, = ax.plot(x, y)
-
-# plot planning/preparation for 3D dataset
+# Activates only if n_inputs == 3
 elif n_inputs == 3:
-    x = np.arange(0, np.max(X_train[:, [0]]), 0.1)
-    y = np.arange(0, np.max(X_train[:, [1]]), 0.1)
+    x = np.arange(np.min(X_train[:, [0]]), np.max(X_train[:, [0]]), 0.1)
+    y = np.arange(np.min(X_train[:, [1]]), np.max(X_train[:, [1]]), 0.1)
     x, y = np.meshgrid(x, y)
-    plt.ion()
-    fig = plt.figure()
-    ax = fig.add_subplot(projection='3d')
-    ax.set_xlim([min(X_train[:, [0]]) - 2, max(X_train[:, [0]]) + 2])
-    ax.set_ylim([min(X_train[:, [1]]) - 2, max(X_train[:, [1]] + 2)])
-    surf = ax
+    if ViewRealTimePlots:
+        plt.ion()
+        fig = plt.figure()
+        ax = fig.add_subplot(projection='3d')
+        ax.set_xlim([min(X_train[:, [0]]) - 2, max(X_train[:, [0]]) + 2])
+        ax.set_ylim([min(X_train[:, [1]]) - 2, max(X_train[:, [1]] + 2)])
 
+print("Starting Weights: ", weights, " bias: ", bias)
 predicted = np.ones(n_rows)
 current_season = 0
-ShowIter = 0
-
-# Training the Dataset...
 currently_predicted = np.zeros(n_rows)
 while current_season < seasons:
     miss = 0
+    hit = 0
     for current_iter, xi in enumerate(X_train):
         linear_output = 0
         for i in range(0, n_inputs):
@@ -148,6 +162,9 @@ while current_season < seasons:
         predicted_y = activationFunc(linear_output)
         currently_predicted[current_iter] = predicted_y
         if predicted_y != target[current_iter]:
+            if useDynamicLR:
+                DynamicLearningRate = learning_rate * (1 / 10) ** (linear_output * LRrate)
+                print("Season ", current_season + 1, " & Iter ", current_iter, " Learning Rate: ", DynamicLearningRate)
             for i in range(0, n_inputs):
                 weights[i] = weights[i] + learning_rate * (target[current_iter] - predicted_y) * xi[i]
             miss += 1
@@ -155,9 +172,8 @@ while current_season < seasons:
             bias = bias + learning_rate * (target[current_iter] - predicted_y)
         else:
             predicted[current_iter] = predicted_y
-
-        # plotting 2D dataset with regression line in real time
-        if n_inputs == 2:
+            hit += 1
+        if n_inputs == 2 and ViewRealTimePlots:
             y = -(weights[0] / weights[1]) * x + \
                 (-bias / weights[1])
             ax.set(xlabel='X1',
@@ -167,6 +183,7 @@ while current_season < seasons:
             ax.set_xlim([min(X_train[:, [0]]) - 2, max(X_train[:, [0]]) + 2])
             ax.set_ylim([min(X_train[:, [1]]) - 2, max(X_train[:, [1]] + 2)])
             ax.scatter(X_train[:, [0]], X_train[:, [1]], marker='o', c=currently_predicted)
+            ax.scatter(xi[0], xi[1], marker='o', c='r')
             line, = ax.plot(x, y)
             line.set_ydata(y)
 
@@ -175,8 +192,7 @@ while current_season < seasons:
             fig.canvas.flush_events()
             ax.clear()
 
-        # plotting 3D dataset with regression line in real time
-        if n_inputs == 3:
+        if n_inputs == 3 and ViewRealTimePlots:
             z = (-weights[0] / weights[2]) * x + \
                 (-weights[1] / weights[2]) * y + \
                 (-bias / weights[2])
@@ -185,24 +201,39 @@ while current_season < seasons:
             ax.set_ylim([min(X_train[:, [1]]) - 2, max(X_train[:, [1]] + 2)])
             ax.set_zlim([min(X_train[:, [2]]) - 2, max(X_train[:, [2]] + 2)])
             ax.scatter(X_train[:, [0]], X_train[:, [1]], X_train[:, [2]], marker='o', c=currently_predicted)
-            ax.scatter(xi[0], xi[1], marker='o', c='r')
+            ax.scatter(xi[0], xi[1], xi[2],  marker='o', c='r')
             surf = ax.plot_surface(x, y, z, cmap=cm.coolwarm)
 
             fig.canvas.draw()
             plt.pause(0.005)
             fig.canvas.flush_events()
             ax.clear()
-    # Loop breaks if all predictions are successful
+
+    accuracy = (hit - miss) / n_rows * 100
+    if not useDynamicLR:
+        print("Season ", current_season + 1, " Accuracy Rate: ", str(accuracy))
+    else:
+        print("Season ", current_season + 1, " Accuracy Rate: ", str(accuracy))
+    temp = accuracy
+    print("Epoch Weights: ", weights, "\n")
+
+    if current_season + 1 == seasons and miss != 0 and StopAtSetSeasons:
+        seasons += 1
     if miss == 0:
         break
     current_season += 1
 
-# Finally visualize 2D plot with trained weights
 if n_inputs == 2:
     y = -(weights[0] / weights[1]) * x + (-bias / weights[1])
+    if ViewRealTimePlots:
+        plt.clf()
+        plt.close()
 
     fig = plt.figure()
     ax = fig.add_subplot()
+    ax.set_xlim([min(X_train[:, [0]]) - 2, max(X_train[:, [0]]) + 2])
+    ax.set_ylim([min(X_train[:, [1]]) - 2, max(X_train[:, [1]] + 2)])
+
     plt.title("Season: " + str(current_season) + " Iter: " + str(current_iter))
     ax.set_xlim([min(X_train[:, [0]]) - 2, max(X_train[:, [0]]) + 2])
     ax.set_ylim([min(X_train[:, [1]]) - 2, max(X_train[:, [1]] + 2)])
@@ -210,9 +241,16 @@ if n_inputs == 2:
     ax.plot(x, y, 'r')
     plt.draw()
 
-# Finally visualize 3D plot with trained weights
 if n_inputs == 3:
     z = (-weights[0] / weights[2]) * x + (-weights[1] / weights[2]) * y + (-bias / weights[2])
+    if ViewRealTimePlots:
+        plt.clf()
+        plt.close()
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+    ax.set_xlim([min(X_train[:, [0]]) - 2, max(X_train[:, [0]]) + 2])
+    ax.set_ylim([min(X_train[:, [1]]) - 2, max(X_train[:, [1]] + 2)])
+
     ax.set(xlabel='X1',
            ylabel='X2',
            zlabel='X3',
@@ -226,21 +264,10 @@ if n_inputs == 3:
     surf = ax.plot_surface(x, y, z, cmap=cm.coolwarm)
     fig.canvas.draw()
 
-
-
-# Prints the final weights after training both 2D & 3D
-if n_inputs == 2:
-    print('bias =\t', bias, "\nW1 =\t\t", weights[0], "\nW2 =\t\t", weights[1])
-    print("Linear Function Formula -> Linear_Output = bias + W1*x1 + W2*x2\n", )
-if n_inputs == 3:
-    print('bias =\t', bias, "\nW0 = \t\t", weights[0], "\nW1 = \t\t", weights[1], "\nW2 = \t\t",
-          weights[2])
-    print("Linear Function Formula -> Linear_Output = bias + W1*x1 + W2*x2 + W3*x3\n")
-
 final_target = ["" for x in range(n_rows)]
 final_prediction = ["" for x in range(n_rows)]
 
-# Conversion to the Original Labels from 1 & 0 to act_outputs
+# Conversion... To original binary outputs
 for i, x in enumerate(target):
     if x == 1:
         final_target[i] = act_outputs[0]
@@ -253,7 +280,6 @@ for i, x in enumerate(currently_predicted):
     elif x == 0:
         final_prediction[i] = act_outputs[1]
 
-# finally prints the latest predictions made compared with the target as well as the success percentage 
 AllPredicted = True
 countSuccess = 0
 for i in range(0, n_rows):
@@ -268,3 +294,11 @@ if AllPredicted:
     print("All Training Data Predicted at ", countSuccess / n_rows * 100, '% Accuracy')
 if not AllPredicted:
     print("Not all training Data was Predicted!", countSuccess / n_rows * 100, '% Accurate')
+
+if n_inputs == 2:
+    print('bias =\t', bias, "\nW1 =\t\t", weights[0], "\nW2 =\t\t", weights[1])
+    print("Linear Function Formula -> Linear_Output = W0*bias + W1*x1 + W2*x2\n", )
+if n_inputs == 3:
+    print('W3(bias) =\t', bias, "\nW0 = \t\t", weights[0], "\nW1 = \t\t", weights[1], "\nW2 = \t\t",
+          weights[2])
+    print("Linear Function Formula -> Linear_Output = W0*bias + W1*x1 + W2*x2 + W3*x3\n")
